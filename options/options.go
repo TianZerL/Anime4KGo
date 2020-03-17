@@ -29,7 +29,7 @@ func init() {
 	flag.Parse()
 }
 
-//NewOptions return a options object, which is been initialized.
+//NewOptions return a options object pointer
 func NewOptions() *Opt {
 	return &options
 }

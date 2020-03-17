@@ -16,7 +16,7 @@ import (
 	"github.com/disintegration/gift"
 )
 
-//Img defined a image class
+//Img defined the image class
 type Img struct {
 	W       int
 	H       int
@@ -56,15 +56,15 @@ func (img *Img) Process(passes int, sc, se float64, fastMode bool) {
 	//debug("./debug/resize.png", dstImg)
 	for i := 0; i < passes; i++ {
 		getGray(dstImg)
-		//debug("./debug/grayscale.jpg", dstImg)
+		//debug("./debug/get_gray.jpg", dstImg)
 		pushColor(dstImg, sc)
 		//debug("./debug/push_color.jpg", dstImg)
 		getGradient(dstImg, fastMode)
-		//debug("./debug/edge.jpg", dstImg)
+		//debug("./debug/get_gradient.jpg", dstImg)
 		pushGradient(dstImg, se)
 		//debug("./debug/out.jpg", dstImg)
 	}
-	//debug("./debug/out.png", dstImg)
+	//debug("./debug/rst_out.png", dstImg)
 	img.data = dstImg
 }
 

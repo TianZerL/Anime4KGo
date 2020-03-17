@@ -14,11 +14,16 @@ func main() {
 		opt.Usage()
 		return
 	}
+	//Load image
 	m := img.LoadImg(opt.InputFile)
+	//Show basic infomation of image and process
 	m.ShowInfo(opt)
+	//Start timing for process
 	s := time.Now()
+	//main process
 	m.Process(opt.Passes, opt.StrengthColor, opt.StrengthGradient, opt.FastMode)
 	t := time.Since(s)
 	fmt.Println("Total time for processing:", t)
+	//Save image to disk
 	m.SaveImg(opt.OutputFile)
 }
