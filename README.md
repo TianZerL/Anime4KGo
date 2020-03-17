@@ -1,9 +1,9 @@
 # Anime4KGo
-This is a implementation of Anime4K in Go. It based on the [bloc97's Anime4K](https://github.com/bloc97/Anime4K) Algorithm version 0.9.  
+This is a implementation of Anime4K in Go. It based on the [bloc97's Anime4K](https://github.com/bloc97/Anime4K) algorithm version 0.9 and some optimizations have been made.  
 This project is for learning and the exploration task of algorithm course in SWJTU.
 
 # About Anime4K
-Anime4K is a simple high-quality anime upscale algorithm, and it does not use any machine learning approaches.
+Anime4K is a simple high-quality anime upscale algorithm for anime. it does not use any machine learning approaches, and can be very fast in real-time processing.
 
 # Usage
     -?    Show help information

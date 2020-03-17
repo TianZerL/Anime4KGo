@@ -18,7 +18,7 @@ func main() {
 	m := img.LoadImg(opt.InputFile)
 	//Show basic infomation of image and process
 	m.ShowInfo(opt)
-	//Start timing for process
+	//Start timing for processing
 	s := time.Now()
 	//main process
 	m.Process(opt.Passes, opt.StrengthColor, opt.StrengthGradient, opt.FastMode)
