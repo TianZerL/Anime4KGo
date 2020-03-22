@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TianZerL/Anime4KGo/img"
+	"github.com/TianZerL/Anime4KGo/anime4kgo"
 	"github.com/TianZerL/Anime4KGo/options"
 )
 
@@ -15,12 +15,12 @@ func main() {
 		return
 	}
 	//Load image
-	m := img.LoadImg(opt.InputFile)
+	m := anime4kgo.LoadImg(opt.InputFile)
 	//Show basic infomation of image and process
 	m.ShowInfo(opt)
 	//Start timing for processing
 	s := time.Now()
-	//main process
+	//Main process
 	m.Process(opt.Passes, opt.StrengthColor, opt.StrengthGradient, opt.FastMode)
 	t := time.Since(s)
 	fmt.Println("Total time for processing:", t)

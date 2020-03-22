@@ -25,7 +25,7 @@ func init() {
 	flag.BoolVar(&options.Help, "?", false, "Show help information")
 	flag.IntVar(&options.Passes, "p", 2, "Passes for processing")
 	flag.Float64Var(&options.StrengthColor, "sc", 1.0/3.0, "Strength for pushing color,range 0 to 1,higher for thinner")
-	flag.Float64Var(&options.StrengthGradient, "se", 1.0, "Strength for pushing gradient,range 0 to 1,higher for sharper")
+	flag.Float64Var(&options.StrengthGradient, "sg", 1.0, "Strength for pushing gradient,range 0 to 1,higher for sharper")
 	flag.Parse()
 }
 

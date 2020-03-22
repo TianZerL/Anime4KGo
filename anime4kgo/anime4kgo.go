@@ -1,4 +1,4 @@
-package img
+package anime4kgo
 
 import (
 	"bytes"
@@ -41,14 +41,14 @@ func LoadImg(src string) *Img {
 
 //ShowInfo will show the basic infomation of the image
 func (img *Img) ShowInfo(opt *options.Opt) {
-	fmt.Fprintf(os.Stderr, "Weight: %v, Height: %v, Type: %v\n", img.W, img.H, img.FmtType)
+	fmt.Fprintf(os.Stderr, "Width: %v, Height: %v, Type: %v\n", img.W, img.H, img.FmtType)
 	fmt.Println("----------------------------------------------")
-	fmt.Fprintf(os.Stderr, "Input: \"%v\"\nOutput: \"%v\"\n"+"Fast mode: %v\nStrength color: %v\nStrength gradient: %v\n", opt.InputFile, opt.OutputFile, opt.FastMode, opt.StrengthColor, opt.StrengthGradient)
+	fmt.Fprintf(os.Stderr, "Input: \"%v\"\nOutput: \"%v\"\nPasses: %v\nFast mode: %v\nStrength color: %v\nStrength gradient: %v\n", opt.InputFile, opt.OutputFile, opt.Passes, opt.FastMode, opt.StrengthColor, opt.StrengthGradient)
 	fmt.Println("----------------------------------------------")
 }
 
 //Process anime4k
-func (img *Img) Process(passes int, sc, se float64, fastMode bool) {
+func (img *Img) Process(passes int, sc, sg float64, fastMode bool) {
 	//resize
 	g := gift.New(gift.Resize(img.W*2, img.H*2, gift.CubicResampling))
 	dstImg := image.NewRGBA(g.Bounds(img.data.Bounds()))
@@ -61,7 +61,7 @@ func (img *Img) Process(passes int, sc, se float64, fastMode bool) {
 		//debug("./debug/push_color.jpg", dstImg)
 		getGradient(dstImg, fastMode)
 		//debug("./debug/get_gradient.jpg", dstImg)
-		pushGradient(dstImg, se)
+		pushGradient(dstImg, sg)
 		//debug("./debug/out.jpg", dstImg)
 	}
 	//debug("./debug/rst_out.png", dstImg)
@@ -76,7 +76,7 @@ func getGray(img *image.RGBA) {
 	})
 }
 
-//getGray compute the gradient of the image and store it to the Alpha channel
+//getGradient compute the gradient of the image and store it to the Alpha channel
 func getGradient(img *image.RGBA, fastMode bool) {
 	maxX := img.Bounds().Dx() - 1
 	maxY := img.Bounds().Dy() - 1
@@ -111,18 +111,11 @@ func getGradient(img *image.RGBA, fastMode bool) {
 //pushColor will make the linework of the image thinner guided by the grayscale in Alpha channel
 //the range of strength from 0 to 1, greater for thinner
 func pushColor(dst *image.RGBA, strength float64) {
-	getLightest := func(mc, lightest, a, b, c *color.RGBA) {
-		aR := float64(mc.R)*(1.0-strength) + ((float64(a.R)+float64(b.R)+float64(c.R))/3.0)*strength
-		aG := float64(mc.G)*(1.0-strength) + ((float64(a.G)+float64(b.G)+float64(c.G))/3.0)*strength
-		aB := float64(mc.B)*(1.0-strength) + ((float64(a.B)+float64(b.B)+float64(c.B))/3.0)*strength
-		aA := float64(mc.A)*(1.0-strength) + ((float64(a.A)+float64(b.A)+float64(c.A))/3.0)*strength
-
-		if aA > float64(lightest.A) {
-			lightest.R = unFloat(aR)
-			lightest.G = unFloat(aG)
-			lightest.B = unFloat(aB)
-			lightest.A = unFloat(aA)
-		}
+	getLightest := func(mc, a, b, c *color.RGBA) {
+		mc.R = unFloat(float64(mc.R)*(1.0-strength) + ((float64(a.R)+float64(b.R)+float64(c.R))/3.0)*strength)
+		mc.G = unFloat(float64(mc.G)*(1.0-strength) + ((float64(a.G)+float64(b.G)+float64(c.G))/3.0)*strength)
+		mc.B = unFloat(float64(mc.B)*(1.0-strength) + ((float64(a.B)+float64(b.B)+float64(c.B))/3.0)*strength)
+		mc.A = unFloat(float64(mc.A)*(1.0-strength) + ((float64(a.A)+float64(b.A)+float64(c.A))/3.0)*strength)
 	}
 
 	changeEachPixel(dst, func(x, y int, p *color.RGBA) color.RGBA {
@@ -142,17 +135,16 @@ func pushColor(dst *image.RGBA, strength float64) {
 		ml, mc, mr := dst.RGBAAt(x+xn, y), *p, dst.RGBAAt(x+xp, y)
 		bl, bc, br := dst.RGBAAt(x+xn, y+yp), dst.RGBAAt(x, y+yp), dst.RGBAAt(x+xn, y+yp)
 
-		lightest := mc
 		//top and bottom
 		maxD := max(bl.A, bc.A, br.A)
 		minL := min(tl.A, tc.A, tr.A)
 		if minL > mc.A && mc.A > maxD {
-			getLightest(&mc, &lightest, &tl, &tc, &tr)
+			getLightest(&mc, &tl, &tc, &tr)
 		} else {
 			maxD = max(tl.A, tc.A, tr.A)
 			minL = min(bl.A, bc.A, br.A)
 			if minL > mc.A && mc.A > maxD {
-				getLightest(&mc, &lightest, &bl, &bc, &br)
+				getLightest(&mc, &bl, &bc, &br)
 			}
 		}
 
@@ -160,12 +152,12 @@ func pushColor(dst *image.RGBA, strength float64) {
 		maxD = max(ml.A, mc.A, bc.A)
 		minL = min(mr.A, tc.A, tr.A)
 		if minL > maxD {
-			getLightest(&mc, &lightest, &mr, &tc, &tr)
+			getLightest(&mc, &mr, &tc, &tr)
 		} else {
 			maxD = max(mc.A, mr.A, tc.A)
 			minL = min(bl.A, ml.A, bc.A)
 			if minL > maxD {
-				getLightest(&mc, &lightest, &bl, &ml, &bc)
+				getLightest(&mc, &bl, &ml, &bc)
 			}
 		}
 
@@ -173,12 +165,12 @@ func pushColor(dst *image.RGBA, strength float64) {
 		maxD = max(tl.A, ml.A, bl.A)
 		minL = min(tr.A, mr.A, br.A)
 		if minL > mc.A && mc.A > maxD {
-			getLightest(&mc, &lightest, &tr, &mr, &br)
+			getLightest(&mc, &tr, &mr, &br)
 		} else {
 			maxD = max(tr.A, mr.A, br.A)
 			minL = min(tl.A, ml.A, bl.A)
 			if minL > mc.A && mc.A > maxD {
-				getLightest(&mc, &lightest, &tl, &ml, &bl)
+				getLightest(&mc, &tl, &ml, &bl)
 			}
 		}
 
@@ -186,33 +178,29 @@ func pushColor(dst *image.RGBA, strength float64) {
 		maxD = max(ml.A, mc.A, tc.A)
 		minL = min(mr.A, br.A, bc.A)
 		if minL > maxD {
-			getLightest(&mc, &lightest, &mr, &br, &tc)
+			getLightest(&mc, &mr, &br, &tc)
 		} else {
 			maxD = max(mc.A, mr.A, bc.A)
 			minL = min(tc.A, ml.A, tl.A)
 			if minL > maxD {
-				getLightest(&mc, &lightest, &tc, &ml, &tl)
+				getLightest(&mc, &tc, &ml, &tl)
 			}
 		}
 
-		return lightest
+		return mc
 	})
 }
 
-//pushColor will make the linework of the image sharper guided by the gradient in Alpha channel
+//pushGradient will make the linework of the image sharper guided by the gradient in Alpha channel
 //the range of strength from 0 to 1, greater for sharper
 func pushGradient(dst *image.RGBA, strength float64) {
-	getLightest := func(mc, lightest, a, b, c *color.RGBA) color.RGBA {
-		aR := float64(mc.R)*(1.0-strength) + ((float64(a.R)+float64(b.R)+float64(c.R))/3.0)*strength
-		aG := float64(mc.G)*(1.0-strength) + ((float64(a.G)+float64(b.G)+float64(c.G))/3.0)*strength
-		aB := float64(mc.B)*(1.0-strength) + ((float64(a.B)+float64(b.B)+float64(c.B))/3.0)*strength
+	getLightest := func(mc, a, b, c *color.RGBA) color.RGBA {
+		mc.R = unFloat(float64(mc.R)*(1.0-strength) + ((float64(a.R)+float64(b.R)+float64(c.R))/3.0)*strength)
+		mc.G = unFloat(float64(mc.G)*(1.0-strength) + ((float64(a.G)+float64(b.G)+float64(c.G))/3.0)*strength)
+		mc.B = unFloat(float64(mc.B)*(1.0-strength) + ((float64(a.B)+float64(b.B)+float64(c.B))/3.0)*strength)
+		mc.A = 255
 
-		lightest.R = unFloat(aR)
-		lightest.G = unFloat(aG)
-		lightest.B = unFloat(aB)
-		lightest.A = 255
-
-		return *lightest
+		return *mc
 	}
 
 	changeEachPixel(dst, func(x, y int, p *color.RGBA) color.RGBA {
@@ -232,56 +220,56 @@ func pushGradient(dst *image.RGBA, strength float64) {
 		ml, mc, mr := dst.RGBAAt(x+xn, y), *p, dst.RGBAAt(x+xp, y)
 		bl, bc, br := dst.RGBAAt(x+xn, y+yp), dst.RGBAAt(x, y+yp), dst.RGBAAt(x+xn, y+yp)
 
-		lightest := mc
 		//top and right
 		maxD := max(bl.A, bc.A, br.A)
 		minL := min(tl.A, tc.A, tr.A)
 		if minL > mc.A && mc.A > maxD {
-			return getLightest(&mc, &lightest, &tl, &tc, &tr)
+			return getLightest(&mc, &tl, &tc, &tr)
 		}
 		maxD = max(tl.A, tc.A, tr.A)
 		minL = min(bl.A, bc.A, br.A)
 		if minL > mc.A && mc.A > maxD {
-			return getLightest(&mc, &lightest, &bl, &bc, &br)
+			return getLightest(&mc, &bl, &bc, &br)
 		}
 
 		//subdiagonal
 		maxD = max(ml.A, mc.A, bc.A)
 		minL = min(mr.A, tc.A, tr.A)
 		if minL > maxD {
-			return getLightest(&mc, &lightest, &mr, &tc, &tr)
+			return getLightest(&mc, &mr, &tc, &tr)
 		}
 		maxD = max(mc.A, mr.A, tc.A)
 		minL = min(bl.A, ml.A, bc.A)
 		if minL > maxD {
-			return getLightest(&mc, &lightest, &bl, &ml, &bc)
+			return getLightest(&mc, &bl, &ml, &bc)
 		}
 
 		//left and right
 		maxD = max(tl.A, ml.A, bl.A)
 		minL = min(tr.A, mr.A, br.A)
 		if minL > mc.A && mc.A > maxD {
-			return getLightest(&mc, &lightest, &tr, &mr, &br)
+			return getLightest(&mc, &tr, &mr, &br)
 		}
 		maxD = max(tr.A, mr.A, br.A)
 		minL = min(tl.A, ml.A, bl.A)
 		if minL > mc.A && mc.A > maxD {
-			return getLightest(&mc, &lightest, &tl, &ml, &bl)
+			return getLightest(&mc, &tl, &ml, &bl)
 		}
 
 		//diagonal
 		maxD = max(ml.A, mc.A, tc.A)
 		minL = min(mr.A, br.A, bc.A)
 		if minL > maxD {
-			return getLightest(&mc, &lightest, &mr, &br, &tc)
+			return getLightest(&mc, &mr, &br, &tc)
 		}
 		maxD = max(mc.A, mr.A, bc.A)
 		minL = min(tc.A, ml.A, tl.A)
 		if minL > maxD {
-			return getLightest(&mc, &lightest, &tc, &ml, &tl)
+			return getLightest(&mc, &tc, &ml, &tl)
 		}
 
-		return color.RGBA{p.R, p.G, p.B, 255}
+		mc.A = 255
+		return mc
 	})
 }
 
